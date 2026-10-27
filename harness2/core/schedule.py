@@ -291,11 +291,16 @@ def _write_summary(summary_path: Path, res: TaskResult) -> None:
 
     Modes may be written by separate processes, so records accumulate per mode.
     """
-    import fcntl
+    try:
+        import fcntl
+        has_fcntl = True
+    except ImportError:
+        has_fcntl = False
 
     lock = summary_path.with_suffix(".lock")
     with open(lock, "w") as lf:
-        fcntl.flock(lf, fcntl.LOCK_EX)
+        if has_fcntl:
+            fcntl.flock(lf, fcntl.LOCK_EX)
         try:
             merged = res.to_dict()
             if summary_path.is_file():
@@ -325,7 +330,8 @@ def _write_summary(summary_path: Path, res: TaskResult) -> None:
             tmp.write_text(json.dumps(merged, indent=2, default=str))
             os.replace(tmp, summary_path)
         finally:
-            fcntl.flock(lf, fcntl.LOCK_UN)
+            if has_fcntl:
+                fcntl.flock(lf, fcntl.LOCK_UN)
 
 
 def _resolve_libraries(
