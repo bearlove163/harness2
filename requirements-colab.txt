@@ -1,0 +1,19 @@
+# Google Colab Wan2.1 依赖包清单
+# 适配 Wan-AI/Wan2.1-T2V-1.3B-Diffusers 及 Wan2.1-I2V
+torch>=2.4.0
+torchvision
+torchaudio
+diffusers>=0.32.0
+transformers>=4.48.0
+accelerate>=0.34.0
+sentencepiece
+imageio[ffmpeg]
+imageio-ffmpeg
+gradio>=4.44.0
+safetensors
+einops
+bitsandbytes>=0.43.0
+huggingface_hub
+pydantic
+requests
+tqdm

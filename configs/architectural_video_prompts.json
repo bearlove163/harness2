@@ -1,0 +1,163 @@
+{
+  "version": "1.0",
+  "name": "Wan2.1 Architectural & Structural Video Prompt Presets",
+  "description": "专为建筑空间、大跨度结构、构造细部节点与建筑人文历史定制的 Wan2.1 视频生成与镜头控制提示词库",
+  "categories": {
+    "massing_and_exterior": {
+      "title": "建筑形态与空间体量 (Architectural Space & Massing)",
+      "presets": [
+        {
+          "id": "curvilinear_pavilion_drone",
+          "name": "流线型展馆全景环绕航拍",
+          "prompt_zh": "电影级航拍镜头，围绕一座白色流线型现代建筑展馆缓慢平滑环绕飞行。极简有机曲面屋顶在阳光下展现细腻微光，周围环绕着波光粼粼的水景镜面水池，远景是清澈的蓝天与微风掠过的绿植树影。超高清8k画质，逼真的物理光影与次表面散射，平稳运镜。",
+          "prompt_en": "Cinematic drone shot, slowly orbiting around a white futuristic curvilinear pavilion with organic fluid geometry. Smooth reflections on surrounding mirror water pool, ultra-realistic daylight with soft shadows, subtle wind blowing nearby greenery, highly detailed architecture rendering, 8k resolution, photorealistic, stable cinematic motion.",
+          "negative_prompt": "jittery motion, flickering, blurry, distorted geometry, low resolution, bad lighting, noisy artifacts, unrealistic movement",
+          "recommended_camera": "Drone Orbit (顺滑环绕航拍)",
+          "guidance_scale": 6.5,
+          "aspect_ratio": "16:9"
+        },
+        {
+          "id": "atrium_vertical_pedestal",
+          "name": "巨型中庭天光垂直拉升漫游",
+          "prompt_zh": "室内平稳垂直升降运镜。穿梭在一座宏大的现代建筑中庭内部，巨大的几何天窗洒下金色的束状丁达尔光线。交错的悬挑连桥与穿孔铝板栏杆在光影中缓缓展现，空间层次分明，灰尘微粒在光束中漂浮，极具空间沉浸感与庄严感。",
+          "prompt_en": "Smooth vertical pedestal crane shot inside a monumental architectural atrium. Golden volumetric God rays streaming through a parametric geometric skylight, illuminating cantilevered glass bridges and perforated metallic panels. Cinematic architectural interior, dust motes drifting in sunbeams, profound spatial depth, photorealistic, stable motion.",
+          "negative_prompt": "deformed structures, warping, camera shake, overexposed, low quality, glitch",
+          "recommended_camera": "Vertical Crane (垂直升降拉升)",
+          "guidance_scale": 7.0,
+          "aspect_ratio": "16:9"
+        },
+        {
+          "id": "skyscraper_low_angle_rise",
+          "name": "超高层地标立面仰拍升降",
+          "prompt_zh": "从地面低角度仰拍一座雄伟的超高层摩天大楼，镜头沿着反光玻璃幕墙笔直向上推拉平移。云层在大厦顶端掠过倒映在玻璃上，黄昏的金色晚霞勾勒出建筑锋利的金属边缘轮廓，宏伟震撼的城市尺度感。",
+          "prompt_en": "Dramatic low-angle tracking shot pointing upwards along the sleek glass facade of a supertall skyscraper. Clouds reflecting off the glazed curtain wall as camera cranes smoothly upwards towards the pinnacle, golden sunset rim light accentuating the sharp metallic mullions, monumental urban scale, cinematic masterpiece.",
+          "negative_prompt": "wobbly, blurry lines, broken facade, uneven glass reflections, bad perspective",
+          "recommended_camera": "Low-angle Tilt & Crane (低角度仰升)",
+          "guidance_scale": 6.8,
+          "aspect_ratio": "9:16"
+        }
+      ]
+    },
+    "structural_systems": {
+      "title": "结构体系与力学之美 (Structural Systems & Load Paths)",
+      "presets": [
+        {
+          "id": "space_truss_exploded_view",
+          "name": "大跨度空间桁架轴测动态拼装",
+          "prompt_zh": "轴测视角展示大跨度体育场空间管桁架结构的动态装配过程。由高强钢管组成的三角形网架单体从空中轻盈下降、精准咬合拼接，形成巨大的马鞍形双曲面网壳，结构杆件节点间发出轻微的应力流光，具有顶级的工程力学与科技美感。",
+          "prompt_en": "Isometric exploded view showing the dynamic assembly of a long-span stadium tubular space truss. Modular triangular steel truss segments gracefully descend and lock into place with precision joints, forming a monumental saddle-shaped hyperbolic paraboloid roof shell, subtle engineering stress flow illumination, high precision, architectural engineering animation.",
+          "negative_prompt": "messy lines, chaotic deformation, unrealistic physics, flickering, blurred joints",
+          "recommended_camera": "Isometric Slow Pan (轴测平缓平移)",
+          "guidance_scale": 7.5,
+          "aspect_ratio": "16:9"
+        },
+        {
+          "id": "cable_stayed_stress_visualization",
+          "name": "斜拉张弦体系受力与风动响应",
+          "prompt_zh": "微距与中景结合的电影级镜头，特写巨型主塔与高强平行钢丝斜拉索。微风掠过，索夹与阻尼器在微动中保持坚韧平衡，晨光在不锈钢保护套管上泛起冷峻的金属高光，展示极致的结构张力与跨越之美。",
+          "prompt_en": "Cinematic medium shot of a cable-stayed bridge and roof mast, focusing on tensioned steel stay cables connected to the main pylon. Subtle wind aerodynamic motion stabilized by mechanical dampers, cold morning sun glinting off stainless steel protective sheaths, palpable structural tension, industrial architectural beauty, ultra-clear.",
+          "negative_prompt": "rubbery cables, shaky, glitchy textures, distorted geometry",
+          "recommended_camera": "Slow Dolly-In (缓慢推近特写)",
+          "guidance_scale": 6.5,
+          "aspect_ratio": "16:9"
+        },
+        {
+          "id": "traditional_dougong_interlock",
+          "name": "中国古建斗栱榫卯旋转咬合",
+          "prompt_zh": "精致的三维写实镜头，围绕一组悬浮的重翘双昂斗栱缓慢360度旋转。老杉木天然纹理清晰可见，栌斗、华栱、昂与瓜栱在空气中层层精密插接咬合，严丝合缝，展现东方传统大木作无钉无胶的抗震智慧与榫卯力学结构。",
+          "prompt_en": "Photorealistic 3D close-up turntable shot rotating around an ancient Chinese Dougong bracket set suspended in mid-air. Weathered aged cedar wood grain textures, intricately interlocking mortise-and-tenon wooden components sliding together with micron precision, historical oriental tectonic craft, dramatic soft studio lighting, 8k resolution.",
+          "negative_prompt": "plastic wood, cartoon, blurry grain, floating detached parts, distorted joinery",
+          "recommended_camera": "360-degree Turntable (环绕旋转)",
+          "guidance_scale": 7.2,
+          "aspect_ratio": "16:9"
+        }
+      ]
+    },
+    "tectonic_details": {
+      "title": "细部构造与节点大样 (Tectonic Details & Construction Joints)",
+      "presets": [
+        {
+          "id": "curtain_wall_spider_fitting",
+          "name": "点支承玻璃幕墙驳接爪微距特写",
+          "prompt_zh": "微距摄影镜头缓缓推入点支承玻璃幕墙的四爪不锈钢驳接爪节点。精密数控车削的不锈钢拉丝质感、不锈钢沉头锁紧螺栓与EPDM柔性垫片清晰细腻，通透的双银Low-E中空夹胶玻璃边缘泛着微绿的晶莹光泽，阳光斜射产生真实的折射焦散光斑。",
+          "prompt_en": "Macro photography dolly-in focusing on a 4-arm stainless steel spider fitting of a point-supported glass curtain wall. Brushed CNC metal texture, precision countersunk bolts, silicone gaskets, ultra-clear low-E laminated glass edge with prismatic optical caustics, architectural tectonic detail perfection.",
+          "negative_prompt": "smudged glass, flat textures, noisy, distorted bolts, low detail",
+          "recommended_camera": "Macro Slider Push (微距滑轨推镜头)",
+          "guidance_scale": 6.8,
+          "aspect_ratio": "16:9"
+        },
+        {
+          "id": "cast_steel_pin_joint",
+          "name": "空间铸钢销轴节点与焊缝透视",
+          "prompt_zh": "电影级特写镜头，展示大跨度钢结构根部的巨型球墨铸钢销轴节点。粗粝而坚固的铸钢表面喷砂质感，高强螺栓阵列与厚板熔透焊缝细致入微，侧逆光打亮金属倒角，呈现重型工程制造的纯粹力量感。",
+          "prompt_en": "Cinematic close-up of a monumental cast-steel pin joint at the base of a structural truss. Industrial shot-blasted matte steel surface, multi-pass full penetration weld beads, high-strength bolt circles, rim lighting accentuating bevels, heavy engineering structural tectonic power, crisp focus.",
+          "negative_prompt": "melted steel, messy welds, low polygon look, blurry",
+          "recommended_camera": "Horizontal Pan & Focus Pull (平移变焦)",
+          "guidance_scale": 7.0,
+          "aspect_ratio": "16:9"
+        },
+        {
+          "id": "fair_faced_concrete_chamfer",
+          "name": "清水混凝土明缝禅缝与对拉螺栓孔",
+          "prompt_zh": "横向慢速滑轨镜头拂过一面安藤忠雄风格的清水混凝土墙面。极度平滑的丝绸质感混凝土表面，整齐韵律的圆形对拉螺栓孔与细腻平直的水平禅缝，午后斜阳在墙面上投下极简而富有诗意的阴影线条。",
+          "prompt_en": "Smooth horizontal slider shot gliding across a minimalist Tadao Ando style fair-faced concrete wall. Silky smooth concrete finish, rhythmic formwork tie-rod cone holes, perfectly crisp horizontal reveal lines, soft afternoon grazing light casting poetic minimalist linear shadows, tranquil architectural zen.",
+          "negative_prompt": "cracked wall, dirty stains, distorted holes, jerky camera, noise",
+          "recommended_camera": "Lateral Slider (横向平移推轨)",
+          "guidance_scale": 6.5,
+          "aspect_ratio": "16:9"
+        }
+      ]
+    },
+    "humanities_and_history": {
+      "title": "建筑人文历史与时空演进 (Humanities & Historical Evolution)",
+      "presets": [
+        {
+          "id": "archival_photo_reanimation",
+          "name": "历史黑白老照片动态彩色复活 (I2V 专属)",
+          "prompt_zh": "由静态老照片无缝转化为逼真动态现实。黑白历史照片中的老建筑与街道逐渐被温暖真实的自然日光唤醒，泛黄颗粒转化为高清晰度电影质感，街巷中长袍与老式电车开始自然行走穿梭，树叶在微风中轻摇，历史在眼前生动复活。",
+          "prompt_en": "Archival vintage black-and-white photograph smoothly transitioning into living color reality. The historical brick-and-timber architecture warms up with realistic daylight, fine photo grain transforms into crisp 4k textures, vintage pedestrians and period tramcars start moving naturally along the cobblestone avenue, living history brought back to life.",
+          "negative_prompt": "morphing faces, glitchy walking, weird distortions, flashing artifacts, erratic movement",
+          "recommended_camera": "Gentle Zoom-In & Living Motion (温和微推生动微动)",
+          "guidance_scale": 6.8,
+          "aspect_ratio": "16:9"
+        },
+        {
+          "id": "heritage_daylight_timelapse",
+          "name": "古建遗存晨昏日月与星轨延时",
+          "prompt_zh": "壮丽的 4K 延时摄影镜头，固定机位凝视一座饱经风霜的古石桥与钟楼。太阳从东方升起，投下长长的影子快速旋转掠过石阶，暮色四合时晚霞染红天际，随后夜幕降临，璀璨银河与星轨在古建筑飞檐后方旋转划过，岁月流转沧海桑田。",
+          "prompt_en": "Magnificent 4k timelapse photography with fixed camera observing a weathered historic stone bridge and clocktower. Fast-moving shadows sweeps across ancient masonry as sun arches overhead, golden dusk transitions into deep velvet twilight, and vibrant starry Milky Way arcs gracefully across the night sky behind traditional eaves, poetic passage of time.",
+          "negative_prompt": "flickering frames, strobe lighting, jitter, broken stone",
+          "recommended_camera": "Static Locked-Off Timelapse (固定机位延时)",
+          "guidance_scale": 7.0,
+          "aspect_ratio": "16:9"
+        },
+        {
+          "id": "ruin_restoration_reverse_time",
+          "name": "历史残垣断壁逆向时光复原",
+          "prompt_zh": "时光倒流电影镜头。古老破败的宫殿残垣断壁处，散落的汉白玉柱础与碎石缓缓升起自动归位，剥落的朱红立柱与金丝楠木梁架重新生长组合，绚烂的沥粉贴金彩画在斗栱间如波纹般迅速蔓延铺展，瞬间重现数百年前皇家宫阙的巍峨盛景。",
+          "prompt_en": "Reverse-time historical cinematic sequence. Decaying ancient imperial palace ruins seamlessly reconstructing in reverse: scattered marble column bases and stone blocks lift and seat into place, timber pillars and rafters re-erect, intricate gold leaf mineral pigments ripple outward across brackets and coffered ceiling, restoring the legendary palace to its zenith glory.",
+          "negative_prompt": "chaotic explosion, blurry mess, ugly colors, cartoon effects, abrupt cuts",
+          "recommended_camera": "Slow Reverse Crane (慢速倒放拉升运镜)",
+          "guidance_scale": 7.5,
+          "aspect_ratio": "16:9"
+        }
+      ]
+    }
+  },
+  "upstream_relay_rules": {
+    "description": "用于自动识别上游 Agent 传入文件并推荐匹配运镜的规则映射",
+    "filename_patterns": {
+      "render|exterior|facade|aerial": "curvilinear_pavilion_drone",
+      "atrium|interior|hall": "atrium_vertical_pedestal",
+      "tower|skyscraper|highrise": "skyscraper_low_angle_rise",
+      "truss|structure|spaceframe|grid": "space_truss_exploded_view",
+      "cable|stayed|tension": "cable_stayed_stress_visualization",
+      "dougong|bracket|timber|mortise": "traditional_dougong_interlock",
+      "curtain|spider|mullion|joint": "curtain_wall_spider_fitting",
+      "steel|cast|weld|pin": "cast_steel_pin_joint",
+      "concrete|fairfaced|wall": "fair_faced_concrete_chamfer",
+      "history|vintage|blackwhite|old": "archival_photo_reanimation",
+      "timelapse|ruin|heritage": "heritage_daylight_timelapse"
+    }
+  }
+}
