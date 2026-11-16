@@ -73,7 +73,7 @@ if ram_gb < 20.0:
     print("\\n💡 检测为 Colab 免费标准环境 (物理内存约 12.7GB)：")
     print("   -> 自动启用防系统 RAM OOM 保护策略")
     print("   -> 优选加载 SOTA 电影级超高速视频模型: Lightricks/LTX-Video")
-    print("   -> 内存开销仅 ~3.5GB，显存占用仅 ~9GB，零崩溃稳定极速出片！")
+    print("   -> 启用 low_cpu_mem_usage 流式载入，零崩溃稳定极速出片！")
     ENGINE_TYPE = "LTX"
     MODEL_ID = "Lightricks/LTX-Video"
 else:
@@ -114,7 +114,7 @@ print(f"   ⚙️ 提示词与配置存储目录:     {CONFIGS_DIR}")
 
     # Cell 3: Fast Pip Dependencies Installation
     code_deps = """# @title 3. 【依赖安装】安装 Diffusers 核心与视频生成加速库
-print("正在安装视频渲染流水线所需核心依赖 (预计耗时 40 秒)...")
+print("正在安装视频渲染流水线所需核心依赖 (预计耗时 30-40 秒)...")
 
 !pip install -q --upgrade diffusers transformers accelerate sentencepiece imageio imageio-ffmpeg gradio>=4.44.0 safetensors einops bitsandbytes torchvision psutil
 
@@ -122,36 +122,45 @@ print("✅ 所有核心依赖包安装完成！")
 """
     cells.append(nbf.v4.new_code_cell(code_deps))
 
-    # Cell 4: Model Pipeline Loader
-    code_model_loader = """# @title 4. 【模型载入】初始化影视级视频生成引擎 (防 OOM 内存安全模式)
-import torch
+    # Cell 4: Model Pipeline Loader (Lazy & Safe Memory Mode)
+    code_model_loader = """# @title 4. 【模型载入器】定义影视级视频生成引擎 (低内存安全模式)
+import os
 import gc
+import torch
 from diffusers.utils import export_to_video
 
-# 显存释放辅助函数
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+
 def flush_memory():
     gc.collect()
     torch.cuda.empty_cache()
 
-print(f"正在载入影视视频生成模型 [{MODEL_ID}]...")
-flush_memory()
-
 pipe = None
-try:
+
+def get_pipeline():
+    global pipe
+    if pipe is not None:
+        return pipe
+        
+    print("="*60)
+    print(f"🚀 正在以低内存模式 (low_cpu_mem_usage) 安全初始化视频引擎: {MODEL_ID} ...")
+    print("="*60)
+    flush_memory()
+    
     if ENGINE_TYPE == "LTX":
         from diffusers import LTXPipeline
-        print("💡 载入 LTX-Video 影视管线 (适配 T4 15GB VRAM 与 12GB RAM)...")
         pipe = LTXPipeline.from_pretrained(
             MODEL_ID,
-            torch_dtype=torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
+            torch_dtype=torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16,
+            low_cpu_mem_usage=True
         )
         pipe.enable_model_cpu_offload()
     else:
         from diffusers import WanPipeline
-        print("💡 载入 Wan2.1 视频管线...")
         pipe = WanPipeline.from_pretrained(
             MODEL_ID,
-            torch_dtype=torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
+            torch_dtype=torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16,
+            low_cpu_mem_usage=True
         )
         pipe.enable_model_cpu_offload()
         if hasattr(pipe, "vae") and pipe.vae is not None:
@@ -159,11 +168,11 @@ try:
                 pipe.vae.enable_slicing()
             if hasattr(pipe.vae, "enable_tiling"):
                 pipe.vae.enable_tiling()
+                
+    print("🎉 视频引擎已安全加载并绑定 GPU！")
+    return pipe
 
-    print("🎉 视频生成引擎加载成功！已配置显存切片与 CPU Offload。")
-except Exception as e:
-    print(f"⚠️ 预加载提示: {e}")
-    print("提示: 可在下方 Gradio 或批量脚本中按需调用。")
+print("✅ 视频引擎安全载入器就绪（支持 low_cpu_mem_usage 内存切片防 OOM 保护）！")
 """
     cells.append(nbf.v4.new_code_cell(code_model_loader))
 
@@ -209,12 +218,13 @@ for idx, img_path in enumerate(input_images, 1):
     print(f" [{idx}] {os.path.basename(img_path)} -> 匹配运镜: {matched_prompt[:50]}...")
 print("="*60)
 
-def run_batch_relay(steps=30, guidance_scale=3.5, num_frames=65, fps=24):
+def run_batch_relay(steps=25, guidance_scale=3.5, num_frames=65, fps=24):
     if not input_images:
         print("💡 提示: inputs 目录暂无待处理图片。请将其他 Agent 产出的效果图或历史照片上传到:")
         print(f"   {INPUTS_DIR}")
         return
 
+    p = get_pipeline()
     print("🚀 开始批量接力渲染...")
     for idx, img_path in enumerate(input_images, 1):
         base_name = os.path.splitext(os.path.basename(img_path))[0]
@@ -227,16 +237,15 @@ def run_batch_relay(steps=30, guidance_scale=3.5, num_frames=65, fps=24):
         
         try:
             start_t = time.time()
-            if pipe is not None:
-                output_frames = pipe(
-                    prompt=prompt,
-                    width=768,
-                    height=512,
-                    num_frames=num_frames,
-                    guidance_scale=guidance_scale,
-                    num_inference_steps=steps
-                ).frames[0]
-                export_to_video(output_frames, output_mp4, fps=fps)
+            output_frames = p(
+                prompt=prompt,
+                width=768,
+                height=512,
+                num_frames=num_frames,
+                guidance_scale=guidance_scale,
+                num_inference_steps=steps
+            ).frames[0]
+            export_to_video(output_frames, output_mp4, fps=fps)
             
             elapsed = time.time() - start_t
             
@@ -334,24 +343,22 @@ def generate_video(mode, prompt, negative_prompt, init_image, steps, guidance_sc
     else: # 16:9
         width, height = 768, 512
         
-    if pipe is not None:
-        generator = torch.Generator(device="cuda" if torch.cuda.is_available() else "cpu").manual_seed(int(seed))
-        output = pipe(
-            prompt=prompt,
-            negative_prompt=negative_prompt,
-            height=height,
-            width=width,
-            num_frames=65,
-            num_inference_steps=int(steps),
-            guidance_scale=float(guidance_scale),
-            generator=generator
-        )
-        frames = output.frames[0]
-        export_to_video(frames, out_path, fps=24)
-        print(f"✅ 渲染完成: {out_path}")
-        return out_path, f"✅ 渲染完成！已保存至 Google Drive: {out_path}"
-    else:
-        return None, "⚠️ 模型尚未初始化完成，请先确认第 4 步执行成功。"
+    p = get_pipeline()
+    generator = torch.Generator(device="cuda" if torch.cuda.is_available() else "cpu").manual_seed(int(seed))
+    output = p(
+        prompt=prompt,
+        negative_prompt=negative_prompt,
+        height=height,
+        width=width,
+        num_frames=65,
+        num_inference_steps=int(steps),
+        guidance_scale=float(guidance_scale),
+        generator=generator
+    )
+    frames = output.frames[0]
+    export_to_video(frames, out_path, fps=24)
+    print(f"✅ 渲染完成: {out_path}")
+    return out_path, f"✅ 渲染完成！已保存至 Google Drive: {out_path}"
 
 # 构建 Gradio 界面
 with gr.Blocks(title="建筑与结构影视视频工作室", theme=gr.themes.Soft()) as demo:
