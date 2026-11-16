@@ -154,7 +154,16 @@ scheduler = DDIMScheduler.from_pretrained(
 pipe.scheduler = scheduler
 
 # 开启显存优化
-pipe.enable_vae_slicing()
+if hasattr(pipe, "enable_vae_slicing"):
+    pipe.enable_vae_slicing()
+elif hasattr(pipe, "vae") and hasattr(pipe.vae, "enable_slicing"):
+    pipe.vae.enable_slicing()
+
+if hasattr(pipe, "enable_vae_tiling"):
+    pipe.enable_vae_tiling()
+elif hasattr(pipe, "vae") and hasattr(pipe.vae, "enable_tiling"):
+    pipe.vae.enable_tiling()
+
 pipe.enable_model_cpu_offload()
 
 print("🎉 视频生成引擎已成功加载！显存与物理内存均处于极佳健康状态。")
