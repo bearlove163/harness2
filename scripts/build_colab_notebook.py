@@ -6,11 +6,6 @@ def create_colab_notebook():
     os.makedirs("notebooks", exist_ok=True)
     nb = nbf.v4.new_notebook()
 
-    # Load architectural prompt configs to embed as defaults
-    prompts_path = os.path.join("configs", "architectural_video_prompts.json")
-    with open(prompts_path, "r", encoding="utf-8") as f:
-        prompts_data = json.load(f)
-
     # Notebook level metadata
     nb.metadata = {
         "accelerator": "GPU",
@@ -111,12 +106,12 @@ print(f"   ⚙️ 提示词与配置存储目录:     {CONFIGS_DIR}")
 """
     cells.append(nbf.v4.new_code_cell(code_drive))
 
-    # Cell 3: Silent Fast Pip Dependencies Installation
+    # Cell 3: Fast Pip Dependencies Installation (git diffusers for Wan2.1 support)
     code_deps = """# @title 3. 【依赖安装】安装 Diffusers 核心与视频生成加速库
 print("正在安装 Wan2.1 与视频渲染流水线所需核心依赖 (预计耗时 1-2 分钟)...")
 
-# 安装适配 diffusers 与视频生成的最新库
-!pip install -q --upgrade diffusers>=0.32.0 transformers>=4.48.0 accelerate>=0.34.0 sentencepiece imageio imageio-ffmpeg gradio>=4.44.0 safetensors einops bitsandbytes>=0.43.0 torchvision
+# 安装支持 WanPipeline 的最新 diffusers 与加速工具包
+!pip install -q --upgrade git+https://github.com/huggingface/diffusers.git transformers accelerate sentencepiece imageio imageio-ffmpeg gradio>=4.44.0 safetensors einops bitsandbytes>=0.43.0 torchvision
 
 print("✅ 所有核心依赖包安装完成！")
 """
@@ -126,8 +121,15 @@ print("✅ 所有核心依赖包安装完成！")
     code_model_loader = """# @title 4. 【模型载入】初始化 Wan2.1 动力学生成引擎 (自适应内存管理)
 import torch
 import gc
-from diffusers import AutoPipelineForText2Video, AutoPipelineForImage2Video
 from diffusers.utils import export_to_video
+
+# 通用与专属 Pipeline 适配导入
+try:
+    from diffusers import WanPipeline, AutoencoderKLWan
+    HAS_WAN_PIPELINE = True
+except ImportError:
+    from diffusers import DiffusionPipeline
+    HAS_WAN_PIPELINE = False
 
 # 显存释放辅助函数
 def flush_memory():
@@ -139,26 +141,37 @@ flush_memory()
 
 # 载入管道
 try:
-    pipe_t2v = AutoPipelineForText2Video.from_pretrained(
-        DEFAULT_MODEL_ID,
-        torch_dtype=torch.float16,
-        low_cpu_mem_usage=True
-    )
-    
+    if HAS_WAN_PIPELINE:
+        print("💡 使用 WanPipeline 专用管道加载...")
+        pipe_t2v = WanPipeline.from_pretrained(
+            DEFAULT_MODEL_ID,
+            torch_dtype=torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
+        )
+    else:
+        print("💡 使用通用 DiffusionPipeline 加载...")
+        from diffusers import DiffusionPipeline
+        pipe_t2v = DiffusionPipeline.from_pretrained(
+            DEFAULT_MODEL_ID,
+            torch_dtype=torch.float16,
+            low_cpu_mem_usage=True
+        )
+
     if ENABLE_CPU_OFFLOAD:
+        print("⚙️ 开启模型 CPU Offload (节省 40%+ 显存)...")
         pipe_t2v.enable_model_cpu_offload()
     else:
         pipe_t2v = pipe_t2v.to("cuda")
         
     if ENABLE_VAE_SLICING and hasattr(pipe_t2v, "vae") and pipe_t2v.vae is not None:
-        pipe_t2v.vae.enable_slicing()
+        if hasattr(pipe_t2v.vae, "enable_slicing"):
+            pipe_t2v.vae.enable_slicing()
         if hasattr(pipe_t2v.vae, "enable_tiling"):
             pipe_t2v.vae.enable_tiling()
             
     print("✅ Wan2.1 T2V 管道加载成功！已配置显存切片与优化策略。")
 except Exception as e:
-    print(f"⚠️ 预加载提示: {e}")
-    print("提示: 可在下方 Gradio 或批量脚本中直接按需执行生成。")
+    print(f"⚠️ 提示: 加载遇到异常: {e}")
+    print("可直接在第 6 步 Gradio 中按需动态调用或重试。")
 """
     cells.append(nbf.v4.new_code_cell(code_model_loader))
 
@@ -224,15 +237,22 @@ def run_batch_relay(steps=30, guidance_scale=6.5, num_frames=81, fps=16):
             # 调整图像分辨率适应模型（16的整数倍）
             img = Image.open(img_path).convert("RGB")
             w, h = img.size
-            new_w = (w // 16) * 16
-            new_h = (h // 16) * 16
+            new_w = min(832, (w // 16) * 16)
+            new_h = min(480, (h // 16) * 16)
             img = img.resize((new_w, new_h), Image.LANCZOS)
             
             # 执行生成
             start_t = time.time()
-            # 渲染视频并导出
-            # output_frames = pipe_t2v(prompt=prompt, num_frames=num_frames, guidance_scale=guidance_scale).frames[0]
-            # export_to_video(output_frames, output_mp4, fps=fps)
+            if 'pipe_t2v' in globals() and pipe_t2v is not None:
+                output_frames = pipe_t2v(
+                    prompt=prompt,
+                    height=new_h,
+                    width=new_w,
+                    num_frames=num_frames,
+                    guidance_scale=guidance_scale,
+                    num_inference_steps=steps
+                ).frames[0]
+                export_to_video(output_frames, output_mp4, fps=fps)
             
             elapsed = time.time() - start_t
             
@@ -322,13 +342,31 @@ def generate_video(mode, prompt, negative_prompt, init_image, steps, guidance_sc
     out_filename = f"arch_video_{int(time.time())}_{seed}.mp4"
     out_path = os.path.join(OUTPUTS_DIR, out_filename)
     
-    # 模拟或调用真实 pipeline 生成
-    # frames = pipe_t2v(prompt=prompt, negative_prompt=negative_prompt, num_inference_steps=int(steps), guidance_scale=guidance_scale).frames[0]
-    # export_to_video(frames, out_path, fps=16)
-    
-    # 如果处于展示阶段，可生成预览文件
-    print(f"✅ 生成完成: {out_path}")
-    return out_path, f"渲染完成！文件已存入 Google Drive: {out_path}"
+    # 尺寸与画幅映射（均保证为 16 的倍数）
+    if "9:16" in aspect_ratio:
+        width, height = 480, 832
+    elif "1:1" in aspect_ratio:
+        width, height = 640, 640
+    else: # 16:9
+        width, height = 832, 480
+        
+    # 调用真实 pipeline 渲染
+    if 'pipe_t2v' in globals() and pipe_t2v is not None:
+        generator = torch.Generator(device="cuda" if torch.cuda.is_available() else "cpu").manual_seed(int(seed))
+        output = pipe_t2v(
+            prompt=prompt,
+            negative_prompt=negative_prompt,
+            height=height,
+            width=width,
+            num_inference_steps=int(steps),
+            guidance_scale=float(guidance_scale),
+            generator=generator
+        )
+        frames = output.frames[0]
+        export_to_video(frames, out_path, fps=16)
+        return out_path, f"✅ 渲染完成！已保存至 Google Drive: {out_path}"
+    else:
+        return None, "⚠️ 模型尚未初始化完成，请先确认第 4 步执行成功。"
 
 # 构建 Gradio 界面
 with gr.Blocks(title="Wan2.1 建筑与结构影视视频工作室", theme=gr.themes.Soft()) as demo:
@@ -408,8 +446,7 @@ print("您可以在左侧文件树或 Google Drive 中直接下载该压缩包�
     with open(output_path, "w", encoding="utf-8") as f:
         nbf.write(nb, f)
 
-    print(f"🎉 成功生成建筑视频流水线 Notebook: {output_path}")
-    print(f"总单元格数量: {len(nb.cells)}")
+    print(f"🎉 成功更新建筑视频流水线 Notebook: {output_path}")
 
 if __name__ == "__main__":
     create_colab_notebook()
