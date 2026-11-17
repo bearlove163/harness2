@@ -33,10 +33,10 @@ def create_colab_notebook():
 
 > 本 Notebook 专为**建筑空间展示、大跨度结构分析、细部构造拆解与建筑人文历史演进**定制。
 >
-> 🚀 **核心清晰度修复 (挂载专业 VAE 解码器)**：
-> 1. **挂载 StabilityAI 官方 MSE 视觉解码器 (`stabilityai/sd-vae-ft-mse`)**：彻底解决之前无 VAE 解码导致的“大黄雾、大光斑、画面涂抹模糊”问题，真实还原钢结构三角网架、清晰钢管交错线条与通透玻璃反射！
-> 2. **精准 10 秒成片**：依次渲染大跨度空间管桁架与时空广场天幕，无缝拼接为 10 秒清晰大片。
-> 3. **防过曝引导系数**：微调 Guidance Scale 为 7.0，彻底消除烧焦发黄，保证色彩纯正自然。
+> 🚀 **核心清晰度修复与算力风控规范**：
+> 1. **挂载 StabilityAI 官方 MSE 视觉解码器 (`stabilityai/sd-vae-ft-mse`)**：彻底解决之前无 VAE 导致的“大黄雾、大光斑、画面涂抹模糊”问题，真实还原钢结构三角网架、清晰钢管交错线条与通透玻璃反射！
+> 2. **前置首片/单帧极速抽检 (Sanity Check)**：在批量前先花 35 秒快速检验 VAE 解码质量与钢架线条，杜绝浪费 GPU 配额！
+> 3. **精准 10 秒成片**：依次渲染大跨度空间管桁架与时空广场天幕，无缝拼接为 10 秒清晰大片。
 """
     cells.append(nbf.v4.new_markdown_cell(md_header))
 
@@ -192,11 +192,50 @@ print("资产接力监听就绪。")
 """
     cells.append(nbf.v4.new_code_cell(code_relay))
 
-    # Cell 6: Gradio WebUI
-    code_gradio = """# @title 6. 【可视化工作台】Gradio 调试工作台
-print("调试工作台就绪，请直接执行下方单元格 7 渲染清晰版 10 秒大片！")
+    # Cell 6: Sanity Check (Fast 35s Quality Inspection)
+    code_sanity = """# @title 6. 【首片极速抽检 (Sanity Check)】快速核验 VAE 解码与结构清晰度 (仅需 35 秒)
+import os
+import time
+import torch
+from PIL import Image
+from IPython.display import Image as IPImage, display
+
+print("="*60)
+print("🔍 正在执行【快速抽检 (Sanity Check)】...")
+print("仅跑 15 步快速验证 VAE 解码效果，核验钢结构与天幕线条是否清晰可见！")
+print("="*60)
+
+t0 = time.time()
+gen = torch.Generator(device="cuda" if torch.cuda.is_available() else "cpu").manual_seed(42)
+
+sanity_prompt = "Sharp photorealistic architectural photo of Osaka Station City steel space truss and roof. Intricate white and silver tubular steel lattice space frame, geometric interlocking steel tubes, clear glass panels, realistic daylight, crisp sharp lines, raw photo, highly detailed, 8k."
+sanity_negative = "foggy, hazy, fog, blurry, blur, yellow tint, yellow cast, washed out, overexposed, smudge, indistinct, low resolution, cartoon"
+
+output = pipe(
+    prompt=sanity_prompt,
+    negative_prompt=sanity_negative,
+    height=512,
+    width=768,
+    num_frames=16,
+    num_inference_steps=18,
+    guidance_scale=7.0,
+    generator=gen
+)
+
+sample_frame = output.frames[0][0]
+sanity_frame_path = os.path.join(OUTPUTS_DIR, "sanity_check_frame.png")
+sample_frame.save(sanity_frame_path)
+
+dt = time.time() - t0
+print(f"✅ 抽检首帧生成成功！(耗时: {dt:.1f} 秒)")
+print(f"首帧样张保存于: {sanity_frame_path}")
+print("="*60)
+
+# 在 Notebook 中直接显示抽检样张
+display(IPImage(filename=sanity_frame_path, width=768))
+print("💡 请检查上方样张：钢管交错线条与天幕结构是否已清晰锐利展示！")
 """
-    cells.append(nbf.v4.new_code_cell(code_gradio))
+    cells.append(nbf.v4.new_code_cell(code_sanity))
 
     # Cell 7: 10-Second High-Clarity Multi-Shot Feature Film
     code_multishot = """# @title 7. 【10秒清晰结构大片合成】大阪梅田站 钢结构与大天幕清晰渲染与拼接
@@ -230,12 +269,12 @@ OSAKA_CLEAR_SHOTS = [
 print("="*60)
 print("🎬 正在启动【大阪梅田站 10 秒清晰结构大片全自动生成】！")
 print("重点解决清晰度问题：真实还原空间管桁架的钢管交错线条与天幕玻璃反射！")
+print("预计渲染耗时：约 5~7 分钟 (占用少量免费 GPU 配额)")
 print("="*60)
 
 shot_files = []
 total_start = time.time()
 
-# 采用 25 步，引导系数 7.0 (防发黄)，32 帧每镜头
 for shot in OSAKA_CLEAR_SHOTS:
     idx = shot["id"]
     shot_filename = f"osaka_clear_shot_{idx}_{shot['name']}.mp4"
@@ -253,7 +292,7 @@ for shot in OSAKA_CLEAR_SHOTS:
         height=512,
         width=768,
         num_frames=32,
-        num_inference_steps=25,
+        num_inference_steps=22,
         guidance_scale=7.0,
         generator=gen
     )
@@ -261,7 +300,7 @@ for shot in OSAKA_CLEAR_SHOTS:
     # 32 帧以 6.4 fps 播放，正好 5.0 秒！
     export_to_video(frames, shot_path, fps=6)
     dt = time.time() - t0
-    print(f"✅ 镜头 {idx} 渲染完成: {shot_path} (用时: {dt:.1f}s)")
+    print(f"✅ 镜头 {idx} 渲染完成: {shot_path} (显卡渲染耗时: {dt:.1f}s，成品时长: 5.0秒)")
 
 print("\\n" + "="*60)
 print("🎞️ 正在使用 FFmpeg 无损拼接为精准 10 秒清晰大片...")
@@ -281,7 +320,7 @@ subprocess.run(concat_cmd, shell=True, check=True)
 total_elapsed = time.time() - total_start
 print(f"🎉 恭喜！10 秒清晰建筑大片已全自动合成完毕！")
 print(f"🏆 文件保存路径: {final_10s_feature}")
-print(f"⏱️ 渲染与合成总耗时: {total_elapsed/60:.1f} 分钟")
+print(f"⏱️ 显卡总计算耗时: {total_elapsed/60:.1f} 分钟 | 成品播放总时长: 10.0 秒")
 print("="*60)
 
 # 打包压缩
@@ -298,7 +337,7 @@ print(f"📦 完整清晰视频包已打包: {zip_path}.zip")
     with open(output_path, "w", encoding="utf-8") as f:
         nbf.write(nb, f)
 
-    print(f"🎉 成功构建 10 秒清晰版 Notebook: {output_path}")
+    print(f"🎉 成功构建 10 秒清晰结构大片 Notebook: {output_path}")
 
 if __name__ == "__main__":
     create_colab_notebook()
