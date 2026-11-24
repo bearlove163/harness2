@@ -120,19 +120,23 @@ print("🔧 正在显式加载高保真 VAE: madebyollin/sdxl-vae-fp16-fix ...")
 vae = AutoencoderKL.from_pretrained(
     "madebyollin/sdxl-vae-fp16-fix",
     torch_dtype=torch.float16,
+    low_cpu_mem_usage=True,
 )
 
 MODEL_ID = "SG161222/RealVisXL_V4.0"
 try:
-    print(f"🚀 正在载入写实建筑底模: {MODEL_ID} ...")
+    print(f"🚀 正在载入写实建筑底模: {MODEL_ID} (fp16) ...")
     pipe = StableDiffusionXLPipeline.from_pretrained(
         MODEL_ID,
         vae=vae,
         torch_dtype=torch.float16,
+        variant="fp16",
         use_safetensors=True,
+        low_cpu_mem_usage=True,
     )
 except Exception as err:
     print(f"⚠️ {MODEL_ID} 加载回退 ({err}) -> 使用 stabilityai/stable-diffusion-xl-base-1.0")
+    flush_memory()
     MODEL_ID = "stabilityai/stable-diffusion-xl-base-1.0"
     pipe = StableDiffusionXLPipeline.from_pretrained(
         MODEL_ID,
@@ -140,14 +144,21 @@ except Exception as err:
         torch_dtype=torch.float16,
         variant="fp16",
         use_safetensors=True,
+        low_cpu_mem_usage=True,
     )
 
 pipe.scheduler = DPMSolverMultistepScheduler.from_config(
     pipe.scheduler.config,
     use_karras_sigmas=True,
 )
-pipe.enable_vae_slicing()
-pipe.enable_vae_tiling()
+if hasattr(pipe, "enable_vae_slicing"):
+    pipe.enable_vae_slicing()
+elif hasattr(pipe, "vae") and hasattr(pipe.vae, "enable_slicing"):
+    pipe.vae.enable_slicing()
+if hasattr(pipe, "enable_vae_tiling"):
+    pipe.enable_vae_tiling()
+elif hasattr(pipe, "vae") and hasattr(pipe.vae, "enable_tiling"):
+    pipe.vae.enable_tiling()
 pipe.enable_model_cpu_offload()
 
 print(f"🎉 管线就绪 ({MODEL_ID} + sdxl-vae-fp16-fix)")
