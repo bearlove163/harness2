@@ -17,3 +17,7 @@ ENV/
 # Output and run logs
 runs/
 *.log
+
+# Local Remotion Video Studio
+node_modules/
+video_studio/out/

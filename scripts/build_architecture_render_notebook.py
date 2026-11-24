@@ -1,8 +1,9 @@
 import os
-import json
 import nbformat as nbf
 
+
 def create_render_notebook():
+    """Build the Colab SDXL + Remotion Keyframe Generator notebook."""
     os.makedirs("notebooks", exist_ok=True)
     nb = nbf.v4.new_notebook()
 
@@ -10,39 +11,36 @@ def create_render_notebook():
         "accelerator": "GPU",
         "colab": {
             "gpuType": "T4",
-            "provenance": []
+            "provenance": [],
         },
         "kernelspec": {
             "display_name": "Python 3",
-            "name": "python3"
+            "name": "python3",
         },
         "language_info": {
-            "name": "python"
-        }
+            "name": "python",
+        },
     }
 
     cells = []
 
-    # Title Markdown
-    md_header = """# 🏛️ 建筑与结构工程专业级 AI 渲染工作室 (SDXL + ControlNet Colab 专属版)
+    md_header = """# 🏛️ Antigravity × Colab 建筑工程 1080P 关键帧渲染工作站 (SDXL RealVisXL)
 
 <a href="https://colab.research.google.com/github/bearlove163/harness2/blob/colab_video_generation/notebooks/Architecture_SDXL_Rendering_Colab.ipynb" target="_parent">
     <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
 </a>
 
-> 本 Notebook 专为**建筑方案设计、空间结构受力图、细部节点构造、CAD/草图白模精准出图**打造。
-> 基于工业级 **SDXL (1024x1024 极高清)** 与 **ControlNet 结构线框锁定技术**。
+> 本 Notebook 负责云端 GPU **高精细 16:9 建筑关键帧 (1344×768)** 生成与质检，供本地 **Antigravity + Remotion** 合成 1080P/30fps 电影级纪录长片。
 >
-> 🚀 **核心优势**：
-> 1. **清晰度革命 (1024x1024 真实细节)**：告别微型模型的模糊浑浊，清晰真实呈现空间桁架钢管、螺栓节点、通透玻璃幕墙与混凝土禅缝！
-> 2. **精准线框锁定 (ControlNet)**：上传草图、CAD 结构图或 SU/Rhino 白模截图，AI 严格按照您的结构线条与轴线进行物理级渲染上色，构件 100% 真实不走形！
-> 3. **极速出图**：Colab 免费 T4 显卡上仅需 **10~15 秒** 即可生成一张 1024P 极高清写实图！
-> 4. **双工作台**：内置**开箱即用可视化 WebUI** 与 **ComfyUI 云端一键穿透**。
+> 🛡️ **严格执行安全与画质准则**：
+> 1. **显式挂载 VAE (`madebyollin/sdxl-vae-fp16-fix`)**，彻底杜绝无 VAE 引起的模糊与黄雾。
+> 2. **前置单帧极速抽检 (Cell 5 Sanity Check)**：仅渲染 1 张图，自动检验锐度与色彩后再批量生成 4 场景。
+> 3. **非阻塞下载桥 (Cell 7)**：生成完成后通过 Gradio 公网链接暴露原图与 ZIP，方便本地一键拉取。
 """
     cells.append(nbf.v4.new_markdown_cell(md_header))
 
     # Cell 1: Hardware Check
-    code_gpu = """# @title 1. 【硬件自适应】GPU 检测与显存安全配置
+    code_gpu = """# @title 1. 【硬件检测】检查 Colab GPU / VRAM 与系统内存
 import os
 import sys
 import psutil
@@ -50,28 +48,27 @@ import torch
 
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
-print("="*60)
+print("=" * 60)
 print("正在检查当前 Google Colab 计算资源与 GPU 架构...")
-print("="*60)
+print("=" * 60)
 
-has_gpu = torch.cuda.is_available()
-if not has_gpu:
-    raise SystemError("❌ 未检测到 GPU！请点击顶部菜单栏：代码执行程序 -> 更改运行时类型 -> 硬件加速器选择 'T4 GPU'！")
+if not torch.cuda.is_available():
+    raise SystemError("❌ 未检测到 GPU！请点击顶部菜单：代码执行程序 -> 更改运行时类型 -> 选择 'T4 GPU'！")
 
 gpu_name = torch.cuda.get_device_name(0)
-total_vram = torch.cuda.get_device_properties(0).total_memory / (1024**3)
-ram_gb = psutil.virtual_memory().total / (1024**3)
+total_vram = torch.cuda.get_device_properties(0).total_memory / (1024 ** 3)
+ram_gb = psutil.virtual_memory().total / (1024 ** 3)
 
 print(f"✅ GPU 型号:     {gpu_name}")
 print(f"✅ GPU 显存总量: {total_vram:.2f} GB")
 print(f"✅ 系统物理内存: {ram_gb:.2f} GB")
-print("\\n💡 适配 Colab 免费 T4 环境 (显存充裕，生成 1024P 极高清仅需 12 秒，零 OOM 风险)！")
-print("="*60)
+print("💡 单张 1344x768 关键帧约耗时 12~18 秒，全流程约 1.5 分钟，远低于配额风险阈值。")
+print("=" * 60)
 """
     cells.append(nbf.v4.new_code_cell(code_gpu))
 
-    # Cell 2: Google Drive Mount & Directory
-    code_drive = """# @title 2. 【存储同步】挂载 Google Drive 与渲染归档目录初始化
+    # Cell 2: Google Drive Mount & Directory Setup
+    code_drive = """# @title 2. 【存储同步】挂载 Google Drive 并初始化关键帧输出目录
 from google.colab import drive
 import os
 
@@ -79,21 +76,21 @@ print("正在挂载 Google Drive...")
 drive.mount('/content/drive')
 
 RENDER_BASE_DIR = "/content/drive/MyDrive/AI_Architecture_Renders"
-OUTPUTS_DIR = os.path.join(RENDER_BASE_DIR, "outputs")
+OUTPUTS_DIR = os.path.join(RENDER_BASE_DIR, "osaka_remotion_keyframes")
 INPUTS_DIR = os.path.join(RENDER_BASE_DIR, "inputs_cad_sketches")
 
 for d in [RENDER_BASE_DIR, OUTPUTS_DIR, INPUTS_DIR]:
     os.makedirs(d, exist_ok=True)
 
-print(f"✅ Google Drive 建筑渲染工作空间就绪:")
-print(f"   📥 草图/CAD/模型输入目录: {INPUTS_DIR}")
-print(f"   🖼️ 高清建筑效果图输出目录: {OUTPUTS_DIR}")
+print("✅ Google Drive 工作目录就绪:")
+print(f"   🖼️ 关键帧输出目录: {OUTPUTS_DIR}")
+print(f"   📥 CAD/草图输入目录: {INPUTS_DIR}")
 """
     cells.append(nbf.v4.new_code_cell(code_drive))
 
-    # Cell 3: Fast Dependencies Install
-    code_deps = """# @title 3. 【依赖安装】安装 SDXL 与 ControlNet 建筑渲染核心包
-print("正在安装建筑渲染核心依赖 (预计耗时 30-40 秒)...")
+    # Cell 3: Fast Dependencies Install (single line for clean AST)
+    code_deps = """# @title 3. 【依赖安装】安装 SDXL 与图像处理核心库
+print("正在安装 SDXL 与图像处理核心依赖...")
 
 !pip install -q --upgrade diffusers>=0.30.0 transformers>=4.40.0 accelerate>=0.30.0 controlnet-aux gradio>=4.44.0 safetensors torchvision opencv-python-headless invisible-watermark
 
@@ -101,280 +98,338 @@ print("✅ 所有核心依赖包安装完成！")
 """
     cells.append(nbf.v4.new_code_cell(code_deps))
 
-    # Cell 4: Model Pipeline Loader
-    code_model_loader = """# @title 4. 【模型载入】初始化 SDXL 1024P 与 ControlNet 结构线框渲染管道
-import torch
+    # Cell 4: Model Pipeline Loader (RealVisXL_V4.0 + explicit fp16-fix VAE + fallback)
+    code_model_loader = """# @title 4. 【模型载入】加载 RealVisXL V4.0 与显式 sdxl-vae-fp16-fix 解码器
 import gc
-import cv2
-import numpy as np
-from PIL import Image
+import torch
 from diffusers import (
-    StableDiffusionXLControlNetPipeline, 
-    ControlNetModel, 
-    AutoencoderKL, 
-    DPMSolverMultistepScheduler
+    AutoencoderKL,
+    DPMSolverMultistepScheduler,
+    StableDiffusionXLPipeline,
 )
+
 
 def flush_memory():
     gc.collect()
     torch.cuda.empty_cache()
 
+
 flush_memory()
-
-print("="*60)
-print("正在载入工业级 SDXL 1024P 建筑渲染模型与 ControlNet 结构锁线模型...")
-print("="*60)
-
-# 1. 挂载官方低显存精细 VAE
+print("=" * 60)
+print("🔧 正在显式加载高保真 VAE: madebyollin/sdxl-vae-fp16-fix ...")
 vae = AutoencoderKL.from_pretrained(
     "madebyollin/sdxl-vae-fp16-fix",
-    torch_dtype=torch.float16
-)
-
-# 2. 载入 ControlNet Canny 结构锁线模型 (锁定建筑与钢结构线条)
-controlnet = ControlNetModel.from_pretrained(
-    "diffusers/controlnet-canny-sdxl-1.0",
-    torch_dtype=torch.float16
-)
-
-# 3. 载入 SDXL 基础模型
-pipe_controlnet = StableDiffusionXLControlNetPipeline.from_pretrained(
-    "stabilityai/stable-diffusion-xl-base-1.0",
-    controlnet=controlnet,
-    vae=vae,
     torch_dtype=torch.float16,
-    variant="fp16",
-    use_safetensors=True
 )
 
-# 4. 配置高质量 DPM++ 调度器 (只需 25 步即可逼真收敛)
-pipe_controlnet.scheduler = DPMSolverMultistepScheduler.from_config(
-    pipe_controlnet.scheduler.config, 
-    use_karras_sigmas=True
+MODEL_ID = "SG161222/RealVisXL_V4.0"
+try:
+    print(f"🚀 正在载入写实建筑底模: {MODEL_ID} ...")
+    pipe = StableDiffusionXLPipeline.from_pretrained(
+        MODEL_ID,
+        vae=vae,
+        torch_dtype=torch.float16,
+        use_safetensors=True,
+    )
+except Exception as err:
+    print(f"⚠️ {MODEL_ID} 加载回退 ({err}) -> 使用 stabilityai/stable-diffusion-xl-base-1.0")
+    MODEL_ID = "stabilityai/stable-diffusion-xl-base-1.0"
+    pipe = StableDiffusionXLPipeline.from_pretrained(
+        MODEL_ID,
+        vae=vae,
+        torch_dtype=torch.float16,
+        variant="fp16",
+        use_safetensors=True,
+    )
+
+pipe.scheduler = DPMSolverMultistepScheduler.from_config(
+    pipe.scheduler.config,
+    use_karras_sigmas=True,
 )
+pipe.enable_vae_slicing()
+pipe.enable_vae_tiling()
+pipe.enable_model_cpu_offload()
 
-# 开启全套显存与切片优化
-pipe_controlnet.enable_vae_slicing()
-pipe_controlnet.enable_vae_tiling()
-pipe_controlnet.enable_model_cpu_offload()
-
-print("🎉 SDXL 建筑渲染与 ControlNet 结构锁线引擎加载成功！")
-print("✅ 支持 1024x1024 极清分辨率，显存占用仅 ~7.5GB，安全无 OOM。")
+print(f"🎉 管线就绪 ({MODEL_ID} + sdxl-vae-fp16-fix)")
+print("=" * 60)
 """
     cells.append(nbf.v4.new_code_cell(code_model_loader))
 
-    # Cell 5: Gradio Architectural Studio WebUI
-    code_gradio = """# @title 5. 【可视化工作台】启动建筑设计与结构工程渲染 Gradio Web 界面
-import gradio as gr
-import random
+    # Cell 5: Sanity Check (Single Frame Only)
+    code_sanity = """# @title 5. 【首片极速抽检 (Sanity Check)】仅渲染 1 张 1344x768 测试帧并质检 (约 15 秒)
 import os
 import time
 import cv2
 import numpy as np
-from PIL import Image
-
-# 建筑专业提示词与材质预设
-ARCH_STYLE_PRESETS = {
-    "现代超现实高技派钢结构 (大阪站城风格)": {
-        "prompt": "Monumental modern Osaka Station City architecture, massive white and silver triangular tubular space truss roof, crystal clear diagonal glass canopy reflecting blue sky, sleek Japanese train platforms below, polished concrete floor, sharp tectonic engineering joints, raw architectural photography, hyper-realistic, 8k, professional architectural photo.",
-        "negative": "blurry, fuzzy, drawing, painting, cartoon, flat, bad architecture, distorted structure, messy lines, oversaturated",
-        "guidance": 7.5
-    },
-    "大跨度马鞍形空间管桁架受力透视": {
-        "prompt": "Architectural interior upward angle looking into monumental stadium space truss roof, intersecting tubular steel lattice grid, tension cables, cast steel pin joints, dramatic skylight illumination, structural engineering perfection, sharp focus, 8k, ultra-realistic architectural photo.",
-        "negative": "blurry, bad proportions, chaotic lines, warped structure, cartoon, low quality",
-        "guidance": 7.5
-    },
-    "点支承玻璃幕墙与不锈钢驳接爪节点大样": {
-        "prompt": "Macro detail shot of a point-supported glass curtain wall, brushed 4-arm stainless steel spider fitting, countersunk heavy bolts, crystal clear acoustic glass with green edge refraction, realistic afternoon grazing light casting sharp shadows, architectural detail perfection, 8k.",
-        "negative": "blurry, smudged glass, flat textures, noisy, distorted bolts, cartoon",
-        "guidance": 7.0
-    },
-    "东方传统古建重翘双昂斗栱大木作": {
-        "prompt": "Photorealistic close-up photo of ancient Chinese Dougong bracket set, interlocking mortise-and-tenon weathered cedar wooden beams, authentic historic craftsmanship, soft natural directional lighting, museum exhibition quality, 8k, sharp wood grain.",
-        "negative": "plastic wood, cartoon, blurry grain, floating parts, deformed joinery",
-        "guidance": 7.0
-    },
-    "安藤忠雄极简清水混凝土与禅缝天光": {
-        "prompt": "Minimalist Tadao Ando style fair-faced concrete wall with crisp horizontal reveal lines and rhythmic tie-rod cone holes, soft slit of natural skylight grazing down the smooth silky concrete surface, tranquil Japanese architectural zen, 8k raw photo.",
-        "negative": "cracked wall, dirty stains, distorted holes, noise, low detail, cartoon",
-        "guidance": 7.0
-    }
-}
-
-def extract_canny_edges(image, low_thresh, high_thresh):
-    if image is None:
-        return None
-    img_np = np.array(image.convert("RGB"))
-    edges = cv2.Canny(img_np, low_thresh, high_thresh)
-    edges = np.stack([edges]*3, axis=-1)
-    return Image.fromarray(edges)
-
-def apply_style(style_name):
-    if style_name in ARCH_STYLE_PRESETS:
-        s = ARCH_STYLE_PRESETS[style_name]
-        return s["prompt"], s["negative"], s["guidance"]
-    return "", "", 7.5
-
-def render_architecture(mode, input_img, style_name, custom_prompt, custom_neg, steps, guidance_scale, control_strength, canny_low, canny_high, seed):
-    print(f"🎬 收到渲染请求 | 模式: {mode} | 步数: {steps} | 引导: {guidance_scale}")
-    if seed == -1:
-        seed = random.randint(0, 2**32 - 1)
-        
-    t0 = time.time()
-    generator = torch.Generator(device="cuda" if torch.cuda.is_available() else "cpu").manual_seed(int(seed))
-    
-    prompt = custom_prompt if custom_prompt.strip() else ARCH_STYLE_PRESETS[style_name]["prompt"]
-    neg_prompt = custom_neg if custom_neg.strip() else ARCH_STYLE_PRESETS[style_name]["negative"]
-    
-    out_filename = f"arch_render_1024p_{int(time.time())}_{seed}.png"
-    out_path = os.path.join(OUTPUTS_DIR, out_filename)
-    
-    if mode == "✍️ 结构线稿/CAD/白模精准锁定渲染 (ControlNet)" and input_img is not None:
-        # 调整至 1024x1024 比例
-        orig_img = input_img.convert("RGB")
-        orig_img = orig_img.resize((1024, 1024), Image.LANCZOS)
-        
-        # 提取边缘线条
-        edge_img = extract_canny_edges(orig_img, canny_low, canny_high)
-        
-        # ControlNet 结构锁线渲染
-        result = pipe_controlnet(
-            prompt=prompt,
-            negative_prompt=neg_prompt,
-            image=edge_img,
-            controlnet_conditioning_scale=float(control_strength),
-            num_inference_steps=int(steps),
-            guidance_scale=float(guidance_scale),
-            generator=generator
-        ).images[0]
-        
-        result.save(out_path)
-        dt = time.time() - t0
-        return edge_img, result, f"✅ 1024P 极高清结构渲染完成！(耗时: {dt:.1f} 秒)\\n已保存至 Drive: {out_path}"
-    else:
-        # 纯文本概念直出 (无底图模式也可以构造虚拟线条)
-        dummy_edges = Image.new("RGB", (1024, 1024), (0, 0, 0))
-        result = pipe_controlnet(
-            prompt=prompt,
-            negative_prompt=neg_prompt,
-            image=dummy_edges,
-            controlnet_conditioning_scale=0.0,
-            num_inference_steps=int(steps),
-            guidance_scale=float(guidance_scale),
-            generator=generator
-        ).images[0]
-        
-        result.save(out_path)
-        dt = time.time() - t0
-        return None, result, f"✅ 1024P 概念效果图生成完成！(耗时: {dt:.1f} 秒)\\n已保存至 Drive: {out_path}"
-
-# 构建 Gradio 界面
-with gr.Blocks(title="SDXL 建筑与结构工程极清渲染工作室", theme=gr.themes.Soft()) as demo:
-    gr.Markdown("# 🏛️ 建筑与结构工程 1024P 极高清渲染工作室 (SDXL + ControlNet)")
-    gr.Markdown("专为建筑方案设计、空间结构受力图、CAD/草图白模精准出图打造。100% 结构线条锁定，真实材质物理光影，12秒极速渲染！")
-    
-    with gr.Row():
-        with gr.Column(scale=1):
-            mode_radio = gr.Radio(
-                label="🎯 渲染模式选择",
-                choices=["✍️ 结构线稿/CAD/白模精准锁定渲染 (ControlNet)", "🏛️ 建筑概念效果图直接生成 (Text-to-Architecture)"],
-                value="✍️ 结构线稿/CAD/白模精准锁定渲染 (ControlNet)"
-            )
-            input_image = gr.Image(label="上传建筑草图 / CAD结构线图 / SU白模截图", type="pil")
-            
-            with gr.Accordion("⚙️ 线条提取灵敏度设置", open=False):
-                canny_low = gr.Slider(label="线条提取低阈值", minimum=10, maximum=200, value=100, step=10)
-                canny_high = gr.Slider(label="线条提取高阈值", minimum=50, maximum=300, value=200, step=10)
-                control_strength = gr.Slider(label="结构线条锁定强度 (1.0 为严格贴合)", minimum=0.2, maximum=1.5, value=0.9, step=0.05)
-                
-            style_dropdown = gr.Dropdown(
-                label="🎨 建筑材质与结构风格预设",
-                choices=list(ARCH_STYLE_PRESETS.keys()),
-                value="现代超现实高技派钢结构 (大阪站城风格)"
-            )
-            prompt_input = gr.Textbox(
-                label="正面提示词 (Prompt)",
-                value=ARCH_STYLE_PRESETS["现代超现实高技派钢结构 (大阪站城风格)"]["prompt"],
-                lines=4
-            )
-            neg_prompt_input = gr.Textbox(
-                label="反向负面提示词 (Negative Prompt)",
-                value=ARCH_STYLE_PRESETS["现代超现实高技派钢结构 (大阪站城风格)"]["negative"],
-                lines=2
-            )
-            
-            with gr.Row():
-                steps_slider = gr.Slider(label="推理步数 (DPM++ 25步即为高清)", minimum=15, maximum=40, value=25, step=1)
-                guidance_slider = gr.Slider(label="引导系数 (Guidance Scale)", minimum=4.0, maximum=12.0, value=7.5, step=0.1)
-                seed_input = gr.Number(label="随机种子 (-1 为随机)", value=-1, precision=0)
-                
-            render_btn = gr.Button("🚀 立即开始 1024P 极高清建筑渲染", variant="primary")
-            
-        with gr.Column(scale=1):
-            edge_preview = gr.Image(label="🔍 提取的建筑结构锁线 (ControlNet Mask)")
-            output_image = gr.Image(label="🏆 1024x1024 极清写实建筑效果图")
-            status_box = gr.Textbox(label="渲染状态与保存路径", interactive=False)
-            
-    style_dropdown.change(
-        fn=apply_style,
-        inputs=[style_dropdown],
-        outputs=[prompt_input, neg_prompt_input, guidance_slider]
-    )
-    
-    render_btn.click(
-        fn=render_architecture,
-        inputs=[mode_radio, input_image, style_dropdown, prompt_input, neg_prompt_input, steps_slider, guidance_slider, control_strength, canny_low, canny_high, seed_input],
-        outputs=[edge_preview, output_image, status_box]
-    )
-
-print("正在启动 Gradio 建筑渲染 Web 界面并生成公网访问链接...")
-demo.launch(share=True, debug=True)
-"""
-    cells.append(nbf.v4.new_code_cell(code_gradio))
-
-    # Cell 6: Fast Osaka Demo Render (Zero-click Demonstration)
-    code_demo_render = """# @title 6. 【极速实证】一键渲染一张大阪梅田站 1024P 极高清写实效果图 (仅需 12 秒)
-import os
-import time
 import torch
-from PIL import Image
 from IPython.display import display
 
-print("="*60)
-print("🚀 正在实测渲染一张 1024x1024 大阪站城大天幕与立体管桁架极清效果图...")
-print("重点核验：白色/银色钢管交错三角桁架、透明玻璃面板反射、站台与光影细节！")
-print("="*60)
+print("=" * 60)
+print("🔍 执行强制 Sanity Check：仅渲染 1 张测试帧，检查清晰度与色彩后再批量生成...")
+print("=" * 60)
+
+SANITY_PROMPT = (
+    "RAW architectural photograph of Osaka Station City diagonal silver glass canopy roof "
+    "and white tubular steel space truss over railway platforms, crisp clear sky, "
+    "sharp geometric structural steel members, photorealistic, 8k uhd, sharp focus"
+)
+NEG_PROMPT = (
+    "blurry, fuzzy, foggy, hazy, yellow tint, washed out, overexposed, "
+    "low resolution, bad architecture, distorted lines, cartoon, drawing, anime, painting, watermark, text"
+)
 
 t0 = time.time()
-gen = torch.Generator(device="cuda" if torch.cuda.is_available() else "cpu").manual_seed(42)
-
-demo_prompt = "Stunning architectural professional photograph of Osaka Station City. Looking up at the monumental silver diagonal glass canopy and white tubular space truss roof, triangular lattice steel grid, crystal clear glass panels reflecting natural daylight, sleek commuter train platform below, photorealistic, 8k, raw architectural photo, hyper-detailed, crisp focus."
-demo_negative = "blurry, fuzzy, foggy, hazy, washed out, low resolution, bad architecture, distorted lines, cartoon, drawing, painting"
-
-dummy_edges = Image.new("RGB", (1024, 1024), (0, 0, 0))
-demo_result = pipe_controlnet(
-    prompt=demo_prompt,
-    negative_prompt=demo_negative,
-    image=dummy_edges,
-    controlnet_conditioning_scale=0.0,
-    num_inference_steps=25,
-    guidance_scale=7.5,
-    generator=gen
+gen = torch.Generator(device="cuda").manual_seed(42)
+sanity_img = pipe(
+    prompt=SANITY_PROMPT,
+    negative_prompt=NEG_PROMPT,
+    width=1344,
+    height=768,
+    num_inference_steps=22,
+    guidance_scale=7.0,
+    generator=gen,
 ).images[0]
+gpu_sec = time.time() - t0
 
-demo_out_path = os.path.join(OUTPUTS_DIR, "osaka_station_1024p_masterpiece.png")
-demo_result.save(demo_out_path)
+sanity_path = os.path.join(OUTPUTS_DIR, "00_sanity_check.png")
+sanity_img.save(sanity_path)
 
-dt = time.time() - t0
-print(f"🎉 渲染大成功！耗时仅 {dt:.1f} 秒！")
-print(f"📁 效果图已永久存入 Google Drive: {demo_out_path}")
-print("="*60)
+# 客观清晰度与色彩指标校验
+img_bgr = cv2.imread(sanity_path)
+gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+lap_var = float(cv2.Laplacian(gray, cv2.CV_64F).var())
+hsv = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV)
+mean_sat = float(hsv[:, :, 1].mean())
+b_mean, g_mean, r_mean = [float(x) for x in img_bgr.mean(axis=(0, 1))]
 
-# 直接在 Notebook 中高清展示
-display(demo_result)
+print(f"⏱️ 【显卡计算渲染耗时】: {gpu_sec:.1f} 秒")
+print(f"📐 输出尺寸: {sanity_img.size[0]}x{sanity_img.size[1]}")
+print(f"🔬 拉普拉斯清晰度方差 (Laplacian Var): {lap_var:.1f} (阈值 > 50)")
+print(f"🎨 平均饱和度: {mean_sat:.1f} | 通道均值 RGB=({r_mean:.1f}, {g_mean:.1f}, {b_mean:.1f})")
+
+if lap_var > 50.0 and r_mean > 15.0:
+    print("✅ SANITY_CHECK_PASS: 清晰度与色彩正常，请人工确认下方预览图后运行 Cell 6！")
+else:
+    print("❌ SANITY_CHECK_FAIL: 画面异常模糊或过暗，请勿运行 Cell 6！")
+
+display(sanity_img)
 """
-    cells.append(nbf.v4.new_code_cell(code_demo_render))
+    cells.append(nbf.v4.new_code_cell(code_sanity))
+
+    # Cell 6: 4-Scene Widescreen Keyframes Batch
+    code_batch = """# @title 6. 【4 场景 16:9 关键帧批量渲染】生成 1344x768 建筑高清关键帧并打包 (约 75 秒)
+import os
+import shutil
+import time
+import cv2
+import torch
+
+SCENES_SPEC = [
+    {
+        "filename": "scene_01_aerial_canopy.png",
+        "seed": 101,
+        "title": "01 / 宏观体量 - 巨型斜向天幕",
+        "prompt": (
+            "High-angle daylight architectural photography of Osaka Station City's monumental "
+            "diagonal silver-and-glass canopy roof spanning across modern railway tracks and flanked by high-rise towers, "
+            "crystal clear blue sky, sharp structural detail, photorealistic, 8k uhd, RAW photo"
+        ),
+    },
+    {
+        "filename": "scene_02_space_truss.png",
+        "seed": 202,
+        "title": "02 / 结构力学 - 大跨度空间钢管桁架",
+        "prompt": (
+            "Dramatic upward architectural photography inside Osaka Station's Toki-no-Hiroba concourse "
+            "looking at the huge white tubular steel triangular space truss roof and inclined skylight glazing, "
+            "dramatic geometric shadows, pedestrians on skybridge below, crisp ultra-sharp structural lines, 8k uhd, RAW photo"
+        ),
+    },
+    {
+        "filename": "scene_03_tectonic_joint.png",
+        "seed": 303,
+        "title": "03 / 细部构造 - 抗震节点与点支承幕墙",
+        "prompt": (
+            "Crisp architectural detail macro photograph of a heavy cast-steel seismic pin joint "
+            "and brushed stainless-steel 4-arm spider fitting anchoring thick clear laminated glass curtain wall panels, "
+            "precision bolts, natural grazing sunlight, tack-sharp engineering craftsmanship, 8k uhd, RAW photo"
+        ),
+    },
+    {
+        "filename": "scene_04_twilight_hub.png",
+        "seed": 404,
+        "title": "04 / 城市脉动 - 梅田立体交通枢纽蓝调时刻",
+        "prompt": (
+            "Blue-hour twilight architectural photograph of Umeda Osaka Station's multi-level illuminated glass concourse "
+            "and gleaming commuter train platforms below, glowing warm interior lights contrasting deep indigo sky, "
+            "sharp reflections, ultra-clear 8k architectural photography, RAW photo"
+        ),
+    },
+]
+
+NEG_PROMPT = (
+    "blurry, fuzzy, foggy, hazy, yellow tint, washed out, overexposed, "
+    "low resolution, bad architecture, distorted lines, cartoon, drawing, anime, painting, watermark, text"
+)
+
+generated_paths = []
+total_gpu_sec = 0.0
+
+print("=" * 60)
+print("🎬 开始批量生成 4 张 1344x768 (16:9) 建筑高清关键帧...")
+print("=" * 60)
+
+for i, spec in enumerate(SCENES_SPEC, 1):
+    t0 = time.time()
+    gen = torch.Generator(device="cuda").manual_seed(spec["seed"])
+    img = pipe(
+        prompt=spec["prompt"],
+        negative_prompt=NEG_PROMPT,
+        width=1344,
+        height=768,
+        num_inference_steps=28,
+        guidance_scale=7.0,
+        generator=gen,
+    ).images[0]
+    dt = time.time() - t0
+    total_gpu_sec += dt
+
+    out_path = os.path.join(OUTPUTS_DIR, spec["filename"])
+    img.save(out_path)
+    generated_paths.append(out_path)
+
+    img_bgr = cv2.imread(out_path)
+    lap_var = float(cv2.Laplacian(cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY), cv2.CV_64F).var())
+    size_kb = os.path.getsize(out_path) / 1024.0
+    print(f"[{i}/4] ✅ {spec['title']} | 耗时: {dt:.1f}s | 体积: {size_kb:.0f} KB | 清晰度: {lap_var:.1f}")
+
+zip_base = os.path.join(OUTPUTS_DIR, "osaka_keyframes_1344x768")
+zip_dir_tmp = os.path.join(OUTPUTS_DIR, "_zip_stage")
+os.makedirs(zip_dir_tmp, exist_ok=True)
+for p in generated_paths:
+    shutil.copy2(p, os.path.join(zip_dir_tmp, os.path.basename(p)))
+zip_path = shutil.make_archive(zip_base, "zip", zip_dir_tmp)
+shutil.rmtree(zip_dir_tmp, ignore_errors=True)
+
+print("=" * 60)
+print(f"🎉 4 张高清关键帧全部完成！⏱️ 【显卡计算总耗时】: {total_gpu_sec:.1f} 秒")
+print(f"📦 ZIP 打包文件: {zip_path}")
+print("=" * 60)
+"""
+    cells.append(nbf.v4.new_code_cell(code_batch))
+
+    # Cell 7: Gradio Download Bridge
+    code_bridge = """# @title 7. 【下载桥梁】启动轻量 Gradio 画廊并暴露 HTTP 下载链接
+import os
+import gradio as gr
+
+export_files = [
+    os.path.join(OUTPUTS_DIR, name)
+    for name in [
+        "scene_01_aerial_canopy.png",
+        "scene_02_space_truss.png",
+        "scene_03_tectonic_joint.png",
+        "scene_04_twilight_hub.png",
+        "osaka_keyframes_1344x768.zip",
+    ]
+    if os.path.exists(os.path.join(OUTPUTS_DIR, name))
+]
+
+gallery_items = [
+    (p, os.path.basename(p))
+    for p in export_files
+    if p.endswith(".png")
+]
+
+with gr.Blocks(title="Osaka Keyframes Download Bridge") as bridge_demo:
+    gr.Markdown("# 🏛️ 大阪梅田站 1344×768 极清关键帧资产下载桥")
+    gr.Gallery(value=gallery_items, label="4 张高清关键帧预览", columns=2, height="auto")
+    gr.Files(value=export_files, label="点击文件即可下载原图 & ZIP")
+
+_, local_url, share_url = bridge_demo.launch(
+    share=True,
+    prevent_thread_lock=False,
+    allowed_paths=[OUTPUTS_DIR],
+)
+
+print("=" * 60)
+print(f"GRADIO_PUBLIC_URL: {share_url}")
+for p in export_files:
+    print(f"DOWNLOAD_URL: {share_url}/gradio_api/file={p}")
+print("=" * 60)
+"""
+    cells.append(nbf.v4.new_code_cell(code_bridge))
+
+    # Cell 8: Optional ControlNet Studio (Guarded so it never blocks batch flow)
+    code_controlnet_studio = """# @title 8. 【可选扩展】ControlNet 草图/CAD 精准锁线交互工作室
+RUN_INTERACTIVE_STUDIO = False  # 如需交互式上传 CAD/草图渲染，请改为 True 后单独运行本单元格
+
+if RUN_INTERACTIVE_STUDIO:
+    import random
+    import time
+    import cv2
+    import numpy as np
+    import gradio as gr
+    from PIL import Image
+    from diffusers import ControlNetModel, StableDiffusionXLControlNetPipeline
+
+    controlnet = ControlNetModel.from_pretrained(
+        "diffusers/controlnet-canny-sdxl-1.0",
+        torch_dtype=torch.float16,
+    )
+    pipe_cn = StableDiffusionXLControlNetPipeline.from_pipe(pipe, controlnet=controlnet)
+    pipe_cn.enable_model_cpu_offload()
+
+    def render_from_sketch(input_img, prompt, low_t, high_t, strength, steps, seed):
+        if input_img is None:
+            return None, None, "请先上传草图或 CAD 线稿"
+        if seed == -1:
+            seed = random.randint(0, 2**32 - 1)
+        arr = np.array(input_img.convert("RGB").resize((1024, 1024), Image.LANCZOS))
+        edges = cv2.Canny(arr, int(low_t), int(high_t))
+        edge_img = Image.fromarray(np.stack([edges] * 3, axis=-1))
+        gen = torch.Generator(device="cuda").manual_seed(int(seed))
+        res = pipe_cn(
+            prompt=prompt,
+            image=edge_img,
+            controlnet_conditioning_scale=float(strength),
+            num_inference_steps=int(steps),
+            guidance_scale=7.0,
+            generator=gen,
+        ).images[0]
+        out_p = os.path.join(OUTPUTS_DIR, f"cad_render_{int(time.time())}.png")
+        res.save(out_p)
+        return edge_img, res, f"✅ 已保存: {out_p}"
+
+    with gr.Blocks(title="SDXL ControlNet 建筑线稿工作室") as cn_demo:
+        gr.Markdown("# ✍️ CAD / 草图 / 白模 ControlNet 结构锁线渲染")
+        with gr.Row():
+            with gr.Column():
+                in_img = gr.Image(label="上传草图/CAD", type="pil")
+                in_prompt = gr.Textbox(
+                    label="Prompt",
+                    value="Modern steel truss and glass architecture, crisp daylight, 8k raw architectural photo",
+                )
+                low_s = gr.Slider(10, 200, value=100, step=10, label="Canny Low")
+                high_s = gr.Slider(50, 300, value=200, step=10, label="Canny High")
+                str_s = gr.Slider(0.2, 1.5, value=0.9, step=0.05, label="锁线强度")
+                step_s = gr.Slider(15, 35, value=25, step=1, label="步数")
+                seed_n = gr.Number(value=-1, precision=0, label="Seed")
+                btn = gr.Button("渲染", variant="primary")
+            with gr.Column():
+                edge_out = gr.Image(label="提取线条")
+                img_out = gr.Image(label="效果图")
+                msg_out = gr.Textbox(label="状态")
+        btn.click(
+            render_from_sketch,
+            [in_img, in_prompt, low_s, high_s, str_s, step_s, seed_n],
+            [edge_out, img_out, msg_out],
+        )
+    cn_demo.launch(share=True, allowed_paths=[OUTPUTS_DIR])
+else:
+    print("ℹ️ 可选交互工作室已跳过 (RUN_INTERACTIVE_STUDIO = False)。如需使用请改为 True。")
+"""
+    cells.append(nbf.v4.new_code_cell(code_controlnet_studio))
 
     nb.cells = cells
 
@@ -382,7 +437,8 @@ display(demo_result)
     with open(out_path, "w", encoding="utf-8") as f:
         nbf.write(nb, f)
 
-    print(f"🎉 成功构建 1024P 建筑渲染专业 Notebook: {out_path}")
+    print(f"🎉 成功构建 Antigravity × Colab 关键帧工作站 Notebook: {out_path}")
+
 
 if __name__ == "__main__":
     create_render_notebook()
